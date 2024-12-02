@@ -1,0 +1,37 @@
+stages:
+  - build
+  - test
+
+variables:
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+
+build-container:
+  stage: build
+  image: docker:20.10
+  services:
+    - docker:dind
+  variables:
+    SNYK_TOKEN: ${SNYK_TOKEN}
+  script:
+    - echo "Token do Snyk: ${SNYK_TOKEN}"
+    # Build da imagem com o token do Snyk
+    - docker build --build-arg SNYK_TOKEN=$SNYK_TOKEN -t app-com-snyk .
+  only:
+    - prod # Roda apenas na branch principal (opcional)
+
+snyk-security-test:
+  stage: test
+  image: snyk/snyk-cli:docker
+  services:
+    - docker:dind
+  variables:
+    SNYK_TOKEN: ${SNYK_TOKEN}  # Certifique-se de que o token esteja sendo passado aqui
+  script:
+    - echo "Token durante o testeweee: ${SNYK_TOKEN}"
+    # Autenticação com Snyk usando o token
+    - snyk auth ${SNYK_TOKEN}
+    # Teste de segurança no container
+    - snyk container test app-com-snyk
+  only:
+    - prod
